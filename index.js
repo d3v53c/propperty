@@ -2,12 +2,32 @@ var hasOwnProp = Object.prototype.hasOwnProperty;
 
 module.exports = deep;
 
-function deep (obj, path, value) {
+var ILLEGAL_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+function isIllegalKey(key) {
+  return ILLEGAL_KEYS.indexOf(key) !== -1;
+}
+
+function isProtoPath(path) {
+  return Array.isArray(path)
+    ? path.some(isIllegalKey)
+    : typeof path === "string"
+      ? isIllegalKey(path)
+      : false;
+}
+
+function disallowProtoPath(path) {
+  if (isProtoPath(path)) {
+    throw new Error(`Unsafe path encountered: ${path.toString()}`)
+  }
+}
+
+function deep(obj, path, value) {
   if (arguments.length === 3) return set.apply(null, arguments);
   return get.apply(null, arguments);
 }
 
-function get (obj, path) {
+function get(obj, path) {
   var keys = Array.isArray(path) ? path : path.split('.');
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
@@ -20,8 +40,9 @@ function get (obj, path) {
   return obj;
 }
 
-function set (obj, path, value) {
+function set(obj, path, value) {
   var keys = Array.isArray(path) ? path : path.split('.');
+  disallowProtoPath(keys);
   for (var i = 0; i < keys.length - 1; i++) {
     var key = keys[i];
     if (deep.p && !hasOwnProp.call(obj, key)) obj[key] = {};
